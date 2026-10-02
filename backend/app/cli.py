@@ -1,6 +1,7 @@
 """Operational commands. Usage: ``uv run python -m app.cli --help``."""
 
 import getpass
+from decimal import Decimal
 
 import typer
 from sqlalchemy import select
@@ -8,10 +9,12 @@ from sqlalchemy.orm import Session
 
 from app.core.db import SessionLocal
 from app.core.security import hash_password
-from app.models import AdminRole, AdminUser
+from app.models import AdminRole, AdminUser, CreditPackage, Plan
 from app.services.audit import record_audit
 from app.services.auth import normalize_email
+from app.services.entitlements import validate_entitlements
 from app.services.permissions import DEFAULT_ROLES
+from app.services.subscriptions import ensure_default_plan
 
 cli = typer.Typer(no_args_is_help=True)
 
@@ -33,6 +36,133 @@ def seed_roles_command() -> None:
         seed_roles(db)
         db.commit()
     typer.echo("Default admin roles are present.")
+
+
+# Starter catalogue. Prices are placeholders: adjust them in the admin console.
+DEFAULT_PLANS = [
+    {
+        "code": "starter",
+        "name": "Starter",
+        "sort_order": 10,
+        "monthly_price": Decimal("19.00"),
+        "annual_price": Decimal("190.00"),
+        "included_credits": 100,
+        "description": "For freelancers and small businesses.",
+        "features": ["100 invoices per month", "Bulk upload up to 25 files", "PDF summaries"],
+        "entitlements": {
+            "max_file_size_mb": 15,
+            "max_files_per_batch": 25,
+            "export_formats": ["csv", "xlsx", "json", "pdf"],
+            "history_retention_days": 365,
+            "max_team_members": 3,
+            "credit_purchases": True,
+        },
+    },
+    {
+        "code": "professional",
+        "name": "Professional",
+        "sort_order": 20,
+        "monthly_price": Decimal("49.00"),
+        "annual_price": Decimal("490.00"),
+        "included_credits": 500,
+        "description": "For accountants and growing finance teams.",
+        "features": [
+            "500 invoices per month",
+            "Accounting software exports",
+            "API & webhooks",
+            "Scheduled exports",
+            "Item directory",
+        ],
+        "entitlements": {
+            "max_file_size_mb": 25,
+            "max_files_per_batch": 200,
+            "zip_upload": True,
+            "export_formats": [
+                "csv",
+                "xlsx",
+                "json",
+                "pdf",
+                "tally",
+                "quickbooks",
+                "zoho_books",
+                "xero",
+            ],
+            "history_retention_days": None,
+            "max_team_members": 10,
+            "credit_purchases": True,
+            "api_access": True,
+            "webhooks": True,
+            "max_webhook_endpoints": 5,
+            "scheduled_exports": True,
+            "advanced_reports": True,
+            "item_directory": True,
+        },
+    },
+    {
+        "code": "business",
+        "name": "Business",
+        "sort_order": 30,
+        "monthly_price": Decimal("149.00"),
+        "annual_price": Decimal("1490.00"),
+        "included_credits": 2000,
+        "description": "High-volume processing with overage and custom rules.",
+        "features": [
+            "2,000 invoices per month",
+            "Overage billing",
+            "Custom duplicate rules",
+            "Everything in Professional",
+        ],
+        "entitlements": {
+            "max_file_size_mb": 50,
+            "max_files_per_batch": 1000,
+            "zip_upload": True,
+            "export_formats": [
+                "csv",
+                "xlsx",
+                "json",
+                "pdf",
+                "tally",
+                "quickbooks",
+                "zoho_books",
+                "xero",
+            ],
+            "history_retention_days": None,
+            "max_team_members": 50,
+            "credit_purchases": True,
+            "overage_allowed": True,
+            "api_access": True,
+            "webhooks": True,
+            "max_webhook_endpoints": 20,
+            "scheduled_exports": True,
+            "advanced_reports": True,
+            "item_directory": True,
+            "duplicate_rule_overrides": True,
+        },
+    },
+]
+
+DEFAULT_PACKAGES = [
+    {"name": "50 credits", "credits": 50, "price": Decimal("10.00"), "sort_order": 10},
+    {"name": "200 credits", "credits": 200, "price": Decimal("35.00"), "sort_order": 20},
+    {"name": "1,000 credits", "credits": 1000, "price": Decimal("150.00"), "sort_order": 30},
+]
+
+
+@cli.command("seed-plans")
+def seed_plans() -> None:
+    """Create the default plan catalogue and credit packages if they are missing."""
+    with SessionLocal() as db:
+        ensure_default_plan(db)
+        existing = set(db.scalars(select(Plan.code)))
+        for spec in DEFAULT_PLANS:
+            if spec["code"] not in existing:
+                db.add(
+                    Plan(**{**spec, "entitlements": validate_entitlements(spec["entitlements"])})
+                )
+        if not db.scalar(select(CreditPackage.id).limit(1)):
+            db.add_all(CreditPackage(**p) for p in DEFAULT_PACKAGES)
+        db.commit()
+    typer.echo("Default plans and credit packages are present.")
 
 
 @cli.command("create-admin")

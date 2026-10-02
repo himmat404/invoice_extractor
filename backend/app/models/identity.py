@@ -1,9 +1,10 @@
 import enum
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, Timestamps, UUIDPrimaryKey
@@ -63,6 +64,10 @@ class Workspace(UUIDPrimaryKey, Timestamps, Base):
     default_currency: Mapped[str] = mapped_column(String(3), default="USD")
     status: Mapped[AccountStatus] = mapped_column(
         _enum(AccountStatus, "account_status"), default=AccountStatus.ACTIVE
+    )
+    # Admin-set per-workspace exceptions layered over plan entitlements (spec 5.4).
+    entitlement_overrides: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default="{}"
     )
 
     memberships: Mapped[list["Membership"]] = relationship(back_populates="workspace")

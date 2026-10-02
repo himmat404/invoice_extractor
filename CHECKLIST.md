@@ -48,15 +48,23 @@ Section references (e.g. `§4.3`) point to that document.
 - [x] Tests for auth, isolation, admin RBAC
 
 ## Phase 2 — Plans, entitlements, credits, usage
-- [ ] `plans` with entitlements (credits/period, file size, bulk limits, export formats, retention, API/webhook access) (§5.5)
-- [ ] `subscriptions` (status, period start/end, cancel at period end)
-- [ ] `credit_ledger` (allocation, purchase, grant, adjustment, consumption, reversal) (§5.7)
-- [ ] `credit_packages`
-- [ ] `usage_records`
-- [ ] Backend entitlement enforcement service (§14)
-- [ ] Free plan auto-assigned on registration
-- [ ] Customer endpoints: current plan, usage, credits
-- [ ] Admin endpoints: plan CRUD, grant/revoke credits (audited)
+- [x] `plans` with entitlements (credits/period, file size, bulk limits, ZIP, export formats, retention, team size, API/webhooks, scheduled exports, overage…) (§5.5)
+- [x] `subscriptions` (status, interval, source, period start/end, cancel at period end, captured price)
+- [x] One current subscription per workspace (partial unique index)
+- [x] `credit_accounts` (row-locked balances) + `credit_ledger` (allocation, expiry, purchase, grant, revoke, consumption, reversal) (§5.7)
+- [x] Period credits expire at period end; purchased/granted credits persist; consumption uses period first
+- [x] Idempotent consumption/reversal (no double charges on retries); overage bucket when allowed
+- [x] `credit_packages`
+- [x] `usage_records` (idempotent)
+- [x] Backend entitlement enforcement: `require_feature`, `require_export_format`, `check_can_process` (§14)
+- [x] Workspace-level entitlement overrides (§5.4)
+- [x] Lazy period rollover; gateway subs → past_due → expired after grace period (`billing.grace_period_days`)
+- [x] Default (free) plan auto-assigned on registration and as fallback
+- [x] Customer endpoints: public plans & credit packages, current subscription, usage, credit ledger
+- [x] Admin endpoints: plan & credit-package CRUD, workspace detail, change plan, grant/revoke credits, overrides — all audited
+- [x] `seed-plans` CLI with starter catalogue (Free, Starter, Professional, Business)
+- [x] Tests incl. concurrent consumption (no overspend), rollover, grace period, RBAC
+- [ ] Customer self-service plan change / cancel / credit purchase → Phase 8 (needs payment gateway)
 
 ## Phase 3 — Upload, storage, processing jobs
 - [ ] Storage interface (local + S3), private objects, signed URLs (§8)
@@ -180,4 +188,5 @@ Section references (e.g. `§4.3`) point to that document.
 
 | Date | Phase | Notes |
 |---|---|---|
+| 2026-10-02 | 2 | Plans & entitlements, subscriptions with period rollover and grace, credit ledger with row locking and idempotency, usage records, admin plan/credit management. 60 tests passing. |
 | 2026-10-02 | 0, 1 | Repo scaffold, Docker Compose, CI; backend foundation: auth, sessions, email verification / reset, workspaces, admin RBAC, append-only audit log, activity history, system settings. 33 tests passing. |

@@ -6,9 +6,11 @@ from sqlalchemy import text
 
 from app.api.admin import auth as admin_auth
 from app.api.admin import customers as admin_customers
+from app.api.admin import plans as admin_plans
 from app.api.admin import staff as admin_staff
 from app.api.admin import system as admin_system
-from app.api.customer import account, auth
+from app.api.admin import workspaces as admin_workspaces
+from app.api.customer import account, auth, billing
 from app.core.config import get_settings
 from app.core.db import engine
 from app.core.errors import register_error_handlers
@@ -38,6 +40,8 @@ def create_app() -> FastAPI:
     customer = APIRouter(prefix="/api/v1")
     customer.include_router(auth.router)
     customer.include_router(account.router)
+    customer.include_router(billing.public_router)
+    customer.include_router(billing.router)
     app.include_router(customer)
 
     admin = APIRouter(prefix="/api/admin")
@@ -45,6 +49,8 @@ def create_app() -> FastAPI:
     admin.include_router(admin_customers.router)
     admin.include_router(admin_staff.router)
     admin.include_router(admin_system.router)
+    admin.include_router(admin_plans.router)
+    admin.include_router(admin_workspaces.router)
     app.include_router(admin)
 
     @app.get("/health", tags=["system"])

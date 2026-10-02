@@ -41,6 +41,7 @@ from app.services.auth import (
     revoke_user_sessions,
 )
 from app.services.email import send_password_reset_email, send_verification_email
+from app.services.subscriptions import ensure_default_plan, start_subscription
 
 router = APIRouter(prefix="/auth", tags=["auth"], dependencies=[Depends(enforce_csrf)])
 
@@ -66,6 +67,7 @@ def register(
     db.add_all([user, workspace])
     db.flush()
     db.add(Membership(user_id=user.id, workspace_id=workspace.id, role=WorkspaceRole.OWNER))
+    start_subscription(db, workspace.id, ensure_default_plan(db))
     record_activity(
         db,
         workspace_id=workspace.id,
