@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.env
+
+# Node
+node_modules/
+dist/
+
+# Local storage / editors
+storage/
+.DS_Store
+.idea/
+.vscode/
