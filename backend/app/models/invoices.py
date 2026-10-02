@@ -190,6 +190,7 @@ class Invoice(UUIDPrimaryKey, Timestamps, Base):
     error_code: Mapped[str | None] = mapped_column(String(64))
     error_message: Mapped[str | None] = mapped_column(String(300))
     extraction_result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    extraction_job_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     credit_consumed: Mapped[bool] = mapped_column(Boolean, default=False)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -237,5 +238,12 @@ class ExtractionJob(UUIDPrimaryKey, Timestamps, Base):
     requested_by_admin_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("admin_users.id", ondelete="SET NULL")
     )
+    # Recorded on success for support, cost analysis and audit (spec 9, 14). Internal only.
+    provider_code: Mapped[str | None] = mapped_column(String(64))
+    model_name: Mapped[str | None] = mapped_column(String(100))
+    model_configuration_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    prompt_version_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    extraction_schema_version: Mapped[str | None] = mapped_column(String(16))
+    confidence_method: Mapped[str | None] = mapped_column(String(64))
 
     invoice: Mapped[Invoice] = relationship()

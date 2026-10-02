@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     # Used to sign download URLs and other tokens. MUST be overridden in production.
     secret_key: str = "dev-insecure-secret-change-me"  # noqa: S105
     api_base_url: str = "http://localhost:8000"
+    # Fernet key(s) for secrets at rest (provider/payment credentials). Comma-separated; the
+    # first encrypts, all decrypt (rotation). Derived from secret_key in development only.
+    encryption_keys: str | None = None
 
     customer_app_url: str = "http://localhost:5173"
     admin_app_url: str = "http://localhost:5174"
@@ -61,7 +64,7 @@ class Settings(BaseSettings):
     upload_max_pdf_pages: int = 100
 
     # Processing worker
-    extraction_handler: str = "fake"  # replaced by the AI orchestrator in Phase 4
+    extraction_handler: str = "ai"  # "fake" for local development without a provider
     worker_poll_seconds: float = 1.0
     job_lease_seconds: int = 300
     job_max_attempts: int = 3
@@ -78,6 +81,8 @@ class Settings(BaseSettings):
     def model_post_init(self, __context) -> None:
         if self.is_production and self.secret_key.startswith("dev-insecure"):
             raise ValueError("IF_SECRET_KEY must be set in production")
+        if self.is_production and not self.encryption_keys:
+            raise ValueError("IF_ENCRYPTION_KEYS must be set in production")
 
 
 @lru_cache

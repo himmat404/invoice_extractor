@@ -165,6 +165,68 @@ def seed_plans() -> None:
     typer.echo("Default plans and credit packages are present.")
 
 
+@cli.command("seed-ai")
+def seed_ai(
+    gemini_model: str = typer.Option("gemini-2.5-flash", help="Gemini model to configure"),
+) -> None:
+    """Create AI providers and the default prompt. If IF_GEMINI_API_KEY is set, also store it
+    (encrypted) and configure it as the primary model."""
+    import os
+
+    from app.core.crypto import encrypt_secret, secret_hint
+    from app.models import ModelConfiguration, ModelProvider, ProviderCredential
+    from app.services.ai.prompts import active_prompt
+
+    with SessionLocal() as db:
+        providers = {p.code: p for p in db.scalars(select(ModelProvider))}
+        for code, name, adapter in (
+            ("gemini", "Google Gemini", "gemini"),
+            ("fake", "Fake (testing)", "fake"),
+        ):
+            if code not in providers:
+                providers[code] = ModelProvider(
+                    code=code, name=name, adapter=adapter, is_active=code != "fake"
+                )
+                db.add(providers[code])
+        db.flush()
+        active_prompt(db)
+        key = os.environ.get("IF_GEMINI_API_KEY")
+        if key and not db.scalar(
+            select(ModelConfiguration.id).where(
+                ModelConfiguration.provider_id == providers["gemini"].id
+            )
+        ):
+            cred = ProviderCredential(
+                provider_id=providers["gemini"].id,
+                label="Default",
+                encrypted_secret=encrypt_secret(key),
+                secret_hint=secret_hint(key),
+            )
+            db.add(cred)
+            db.flush()
+            db.add(
+                ModelConfiguration(
+                    provider_id=providers["gemini"].id,
+                    credential_id=cred.id,
+                    model_name=gemini_model,
+                    display_name=gemini_model,
+                    priority=0,
+                    is_active=True,
+                )
+            )
+            typer.echo(f"Configured {gemini_model} as the primary model.")
+        db.commit()
+    typer.echo("AI providers and default prompt are present.")
+
+
+@cli.command("generate-encryption-key")
+def generate_encryption_key() -> None:
+    """Print a new key for IF_ENCRYPTION_KEYS."""
+    from app.core.crypto import generate_key
+
+    typer.echo(generate_key())
+
+
 @cli.command("create-admin")
 def create_admin(
     email: str = typer.Option(...),

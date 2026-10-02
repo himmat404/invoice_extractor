@@ -32,6 +32,7 @@ cp .env.example .env
 uv sync
 uv run alembic upgrade head
 uv run python -m app.cli seed-plans      # default plans + credit packages
+IF_GEMINI_API_KEY=... uv run python -m app.cli seed-ai   # AI providers, prompt, Gemini as primary
 uv run python -m app.cli create-admin --email you@example.com --full-name "Your Name"
 uv run uvicorn app.main:app --reload
 uv run python -m app.worker               # in a second terminal: processes uploads
@@ -50,6 +51,14 @@ uv run ruff check . && uv run ruff format --check .
 
 Tests use the `invoiceflow_test` database (created automatically by docker compose) and
 rebuild its schema from migrations on every run.
+
+## AI extraction
+
+Providers, models, fallback order, API keys and prompts are managed by admins under
+`/api/admin/ai/*` and are never visible to customers. Keys are encrypted at rest
+(`IF_ENCRYPTION_KEYS`) and only a hint (last 4 characters) is ever shown. Each model call is
+recorded in `ai_calls` with tokens, latency and estimated cost (left empty when prices aren't
+configured). Without a provider key, set `IF_EXTRACTION_HANDLER=fake` for local development.
 
 ## Security model (summary)
 

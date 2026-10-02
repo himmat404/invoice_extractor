@@ -88,6 +88,8 @@ def register_handler(name: str, handler: Handler) -> None:
 
 
 def get_handler() -> Handler:
+    import app.services.ai.orchestrator  # noqa: F401 - registers the "ai" handler
+
     name = get_settings().extraction_handler
     if name not in _handlers:
         raise RuntimeError(f"No extraction handler registered as {name!r}")
@@ -271,7 +273,18 @@ def complete(db: Session, job: ExtractionJob, outcome: ExtractionOutcome) -> Non
             idempotency_key=key,
         )
     invoice.extraction_result = outcome.data
+    invoice.extraction_job_id = job.id
     invoice.status = InvoiceStatus.EXTRACTED
+    for key in (
+        "provider_code",
+        "model_name",
+        "model_configuration_id",
+        "prompt_version_id",
+        "extraction_schema_version",
+        "confidence_method",
+    ):
+        if key in outcome.metadata:
+            setattr(job, key, outcome.metadata[key])
     invoice.processed_at = utcnow()
     invoice.error_code = invoice.error_message = None
     job.status = JobStatus.SUCCEEDED

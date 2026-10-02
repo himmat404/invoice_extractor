@@ -4,6 +4,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
+from app.api.admin import ai as admin_ai
 from app.api.admin import auth as admin_auth
 from app.api.admin import customers as admin_customers
 from app.api.admin import jobs as admin_jobs
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
     admin.include_router(admin_plans.router)
     admin.include_router(admin_workspaces.router)
     admin.include_router(admin_jobs.router)
+    admin.include_router(admin_ai.router)
     app.include_router(admin)
 
     @app.get("/health", tags=["system"])

@@ -1,4 +1,13 @@
 from app.models.admin import AdminRole, AdminSession, AdminUser
+from app.models.ai import (
+    AI_ERROR_CLASSES,
+    DEFAULT_FALLBACK_ON,
+    AICall,
+    ModelConfiguration,
+    ModelProvider,
+    PromptVersion,
+    ProviderCredential,
+)
 from app.models.audit import ActivityEvent, AuditLog
 from app.models.base import Base
 from app.models.billing import (
@@ -43,6 +52,13 @@ from app.models.invoices import (
 from app.models.settings import SystemSetting
 
 __all__ = [
+    "AI_ERROR_CLASSES",
+    "DEFAULT_FALLBACK_ON",
+    "AICall",
+    "ModelConfiguration",
+    "ModelProvider",
+    "PromptVersion",
+    "ProviderCredential",
     "ACTIVE_JOB_STATUSES",
     "INVOICE_STATUS_LABELS",
     "Batch",

@@ -160,3 +160,12 @@ def require_permission(permission: str):
         return current
 
     return dependency
+
+
+def require_any_permission(*permissions: str):
+    def dependency(current: CurrentAdmin = Depends(get_current_admin)) -> CurrentAdmin:
+        if not any(has_permission(current.permissions, p) for p in permissions):
+            raise PermissionDeniedError("You don't have permission to perform this action.")
+        return current
+
+    return dependency

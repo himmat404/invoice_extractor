@@ -86,16 +86,20 @@ Section references (e.g. `§4.3`) point to that document.
 - [x] Pluggable extraction handler (fake handler until Phase 4)
 
 ## Phase 4 — AI orchestration
-- [ ] `model_providers`, `model_configurations`, `provider_credentials` (encrypted at rest) (§5.3)
-- [ ] Prompt templates with versions
-- [ ] Provider adapter interface; Gemini adapter with structured output schema (§9)
-- [ ] Primary/fallback routing by admin-defined order and retryable error classes
-- [ ] Timeouts, retries, rate-limit handling
-- [ ] Safe parsing of model response into canonical invoice schema; absent fields → null (§4.4)
-- [ ] Record provider, model, prompt version, extraction version per job
-- [ ] Token usage + estimated cost recording (§5.8)
-- [ ] Credit consumed only on success (§5.7)
-- [ ] Fake provider for tests/dev
+- [x] `model_providers`, `model_configurations`, `provider_credentials` (Fernet-encrypted, write-only, hint only, rotation/revocation) (§5.3)
+- [x] Prompt versions: create, activate, built-in default; version recorded per job
+- [x] Provider adapter interface; Gemini adapter (REST `generateContent`, structured JSON schema, inline PDF/images) + fake adapter (§9)
+- [x] Primary/fallback routing by admin-defined order; per-model `fallback_on` error classes
+- [x] Error classification: auth, rate limit, timeout, outage, invalid request, blocked content, malformed output, missing credential
+- [x] Per-model settings (timeout, temperature, max tokens); transient-only failures → job retried with backoff
+- [x] Canonical invoice schema; safe parsing (decimals as strings, dates, currencies, junk → null + warnings); absent fields stay null (§4.4)
+- [x] Field-level confidence stored only when supplied; method recorded (`model_self_reported_v1`)
+- [x] Provider, model, model config, prompt version, schema version recorded per job (internal only)
+- [x] `ai_calls`: tokens, latency, outcome, estimated cost (null when prices unknown), plan snapshot (§5.8)
+- [x] Admin API: providers, credentials, models, reorder, test run, prompts, usage & cost summary (by model/provider/plan/day/month/workspace, cost per invoice) — audited, RBAC
+- [x] CLI: `seed-ai`, `generate-encryption-key`
+- [x] Credit consumed only on success (from Phase 3)
+- [ ] Gemini File API for documents over ~18 MB (inline limit) — later
 
 ## Phase 5 — Validation, confidence, duplicates
 - [ ] Validation engine: required fields, dates, numerics, currency codes (§4.6)
@@ -196,6 +200,7 @@ Section references (e.g. `§4.3`) point to that document.
 
 | Date | Phase | Notes |
 |---|---|---|
+| 2026-10-02 | 4 | AI orchestration: encrypted provider credentials, Gemini + fake adapters, primary/fallback routing with error classes, prompt versions, canonical schema + strict parser, per-call cost/usage tracking, admin AI API. 136 tests passing. |
 | 2026-10-02 | 3 | Storage with signed URLs, upload validation (magic bytes, PDF/image checks, HEIC, safe ZIP), duplicate check, credit pre-check, Postgres job queue + worker with leases/retries/fairness, batch/invoice endpoints, admin job monitor. 95 tests passing. |
 | 2026-10-02 | 2 | Plans & entitlements, subscriptions with period rollover and grace, credit ledger with row locking and idempotency, usage records, admin plan/credit management. 60 tests passing. |
 | 2026-10-02 | 0, 1 | Repo scaffold, Docker Compose, CI; backend foundation: auth, sessions, email verification / reset, workspaces, admin RBAC, append-only audit log, activity history, system settings. 33 tests passing. |
