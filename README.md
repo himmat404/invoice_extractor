@@ -34,6 +34,7 @@ uv run alembic upgrade head
 uv run python -m app.cli seed-plans      # default plans + credit packages
 uv run python -m app.cli create-admin --email you@example.com --full-name "Your Name"
 uv run uvicorn app.main:app --reload
+uv run python -m app.worker               # in a second terminal: processes uploads
 ```
 
 - API docs: http://localhost:8000/docs

@@ -7,6 +7,9 @@ os.environ.setdefault(
 os.environ["IF_ENVIRONMENT"] = "test"
 os.environ["IF_EMAIL_DRIVER"] = "memory"
 os.environ["IF_REDIS_URL"] = ""
+os.environ["IF_STORAGE_DRIVER"] = "local"
+os.environ["IF_STORAGE_LOCAL_PATH"] = __import__("tempfile").mkdtemp(prefix="if-storage-")
+os.environ["IF_EXTRACTION_HANDLER"] = "fake"
 
 import re  # noqa: E402
 
@@ -68,6 +71,14 @@ def register(client: TestClient, email: str = "ada@example.com", **extra) -> dic
     resp = client.post("/api/v1/auth/register", json=payload)
     assert resp.status_code == 201, resp.text
     return resp.json()
+
+
+def verified_client(email: str = "ada@example.com", **extra) -> TestClient:
+    c = make_client()
+    register(c, email=email, **extra)
+    resp = c.post("/api/v1/auth/verify-email", json={"token": last_token("verify-email")})
+    assert resp.status_code == 200
+    return c
 
 
 def last_token(kind: str) -> str:

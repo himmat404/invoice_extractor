@@ -67,15 +67,23 @@ Section references (e.g. `§4.3`) point to that document.
 - [ ] Customer self-service plan change / cancel / credit purchase → Phase 8 (needs payment gateway)
 
 ## Phase 3 — Upload, storage, processing jobs
-- [ ] Storage interface (local + S3), private objects, signed URLs (§8)
-- [ ] `invoice_files`, `invoices`, `extraction_jobs`, `batches`, `batch_items`
-- [ ] Upload endpoint: type/size/empty validation, magic-byte check, SHA-256 hash (§4.3)
-- [ ] PDF, JPG/JPEG, PNG; HEIC conversion where available
-- [ ] ZIP upload with safe extraction limits (zip-bomb, path traversal) (§21.3)
-- [ ] Credit/subscription check before queueing (§19 step 5)
-- [ ] Job queue + worker, idempotent job lifecycle, unique job IDs
-- [ ] Processing status model (§10)
-- [ ] Cancel queued jobs; retry failed jobs without double charging
+- [x] Storage interface: local disk + S3/MinIO, private objects, short-lived signed URLs (HMAC for local, presigned for S3) (§8)
+- [x] `invoice_files` (original + derived), `invoices`, `extraction_jobs`, `batches`, `batch_items`
+- [x] Upload endpoint: type detected from bytes (not name), size/empty checks, SHA-256, readability checks (§4.3)
+- [x] PDF (page count, encrypted/corrupt detection), JPG/JPEG, PNG; HEIC converted to JPEG for processing
+- [x] ZIP upload: entitlement-gated, entry/size/ratio limits (zip-bomb), nested-archive and encrypted-entry rejection, no disk writes (§21.3)
+- [x] Exact-file duplicate detection, workspace-scoped, with "keep both" override (full rules → Phase 5)
+- [x] Credit/subscription check before queueing, counting credits needed by already-queued jobs (§19 step 5)
+- [x] Postgres-backed job queue (`FOR UPDATE SKIP LOCKED`), worker process (`python -m app.worker`), leases + crash recovery
+- [x] Per-workspace concurrency cap so one workspace can't monopolise workers (§21.3)
+- [x] Retry with exponential backoff for transient errors; attempt log; customer-safe vs internal error messages (§15)
+- [x] One credit per invoice on first success; failures never charged; reprocess doesn't re-charge (configurable) (§5.7, §21.1)
+- [x] Processing status model + customer-friendly labels (§10)
+- [x] Cancel queued invoice/batch; retry failed invoice/batch; reprocess keeps previous results on failure
+- [x] Soft delete (running job discards its result, no charge)
+- [x] Batch progress counts and status
+- [x] Admin: queue stats, job list/detail with diagnostics, retry/cancel (audited, RBAC)
+- [x] Pluggable extraction handler (fake handler until Phase 4)
 
 ## Phase 4 — AI orchestration
 - [ ] `model_providers`, `model_configurations`, `provider_credentials` (encrypted at rest) (§5.3)
@@ -188,5 +196,6 @@ Section references (e.g. `§4.3`) point to that document.
 
 | Date | Phase | Notes |
 |---|---|---|
+| 2026-10-02 | 3 | Storage with signed URLs, upload validation (magic bytes, PDF/image checks, HEIC, safe ZIP), duplicate check, credit pre-check, Postgres job queue + worker with leases/retries/fairness, batch/invoice endpoints, admin job monitor. 95 tests passing. |
 | 2026-10-02 | 2 | Plans & entitlements, subscriptions with period rollover and grace, credit ledger with row locking and idempotency, usage records, admin plan/credit management. 60 tests passing. |
 | 2026-10-02 | 0, 1 | Repo scaffold, Docker Compose, CI; backend foundation: auth, sessions, email verification / reset, workspaces, admin RBAC, append-only audit log, activity history, system settings. 33 tests passing. |

@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://invoiceflow:invoiceflow@localhost:5432/invoiceflow"
     redis_url: str | None = "redis://localhost:6379/0"
 
+    # Used to sign download URLs and other tokens. MUST be overridden in production.
+    secret_key: str = "dev-insecure-secret-change-me"  # noqa: S105
+    api_base_url: str = "http://localhost:8000"
+
     customer_app_url: str = "http://localhost:5173"
     admin_app_url: str = "http://localhost:5174"
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:5174"]
@@ -40,12 +44,40 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     smtp_use_tls: bool = False
 
+    # Object storage (original invoices and generated exports; always private)
+    storage_driver: Literal["local", "s3"] = "local"
+    storage_local_path: str = "./storage"
+    s3_bucket: str = "invoiceflow"
+    s3_endpoint_url: str | None = None  # e.g. http://localhost:9000 for MinIO
+    s3_region: str = "us-east-1"
+    s3_access_key_id: str | None = None
+    s3_secret_access_key: str | None = None
+    signed_url_ttl_seconds: int = 300
+
+    # Uploads (plan entitlements apply on top; these are platform hard limits)
+    upload_hard_max_file_mb: int = 200
+    upload_max_zip_uncompressed_mb: int = 1024
+    upload_max_zip_ratio: int = 200
+    upload_max_pdf_pages: int = 100
+
+    # Processing worker
+    extraction_handler: str = "fake"  # replaced by the AI orchestrator in Phase 4
+    worker_poll_seconds: float = 1.0
+    job_lease_seconds: int = 300
+    job_max_attempts: int = 3
+    job_retry_base_seconds: int = 15
+    max_concurrent_jobs_per_workspace: int = 3
+
     # Rate limiting
     rate_limit_enabled: bool = True
 
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
+
+    def model_post_init(self, __context) -> None:
+        if self.is_production and self.secret_key.startswith("dev-insecure"):
+            raise ValueError("IF_SECRET_KEY must be set in production")
 
 
 @lru_cache

@@ -25,9 +25,37 @@ from app.models.identity import (
     Workspace,
     WorkspaceRole,
 )
+from app.models.invoices import (
+    ACTIVE_JOB_STATUSES,
+    INVOICE_STATUS_LABELS,
+    Batch,
+    BatchItem,
+    BatchItemStatus,
+    BatchSource,
+    ExtractionJob,
+    FileKind,
+    Invoice,
+    InvoiceFile,
+    InvoiceStatus,
+    JobKind,
+    JobStatus,
+)
 from app.models.settings import SystemSetting
 
 __all__ = [
+    "ACTIVE_JOB_STATUSES",
+    "INVOICE_STATUS_LABELS",
+    "Batch",
+    "BatchItem",
+    "BatchItemStatus",
+    "BatchSource",
+    "ExtractionJob",
+    "FileKind",
+    "Invoice",
+    "InvoiceFile",
+    "InvoiceStatus",
+    "JobKind",
+    "JobStatus",
     "CURRENT_SUBSCRIPTION_STATUSES",
     "BillingInterval",
     "CreditAccount",
