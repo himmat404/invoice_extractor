@@ -133,7 +133,11 @@ def test_customer_retry_after_failure(db):
     c = verified_client()
     invoice_id = upload_one(c, "fail-once.pdf")
     work()
-    register_handler("fake-ok", lambda ctx: ExtractionOutcome(data={"ok": True}))
+    from app.services.ai.providers import FAKE_INVOICE
+    from app.services.ai.schema import parse_model_output
+
+    valid = parse_model_output(FAKE_INVOICE).model_dump(mode="json")
+    register_handler("fake-ok", lambda ctx: ExtractionOutcome(data=valid))
     from app.core.config import get_settings
 
     get_settings().extraction_handler = "fake-ok"
@@ -147,7 +151,7 @@ def test_customer_retry_after_failure(db):
         get_settings().extraction_handler = "fake"
     inv = c.get(f"/api/v1/invoices/{invoice_id}").json()
     assert inv["status"] == "extracted"
-    assert inv["extraction_result"] == {"ok": True}
+    assert inv["extraction_result"]["invoice_number"] == "INV-1001"
     assert charges(db, invoice_id) == 1
 
 

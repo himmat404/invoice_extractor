@@ -97,13 +97,24 @@ def get_handler() -> Handler:
 
 
 def _fake_handler(ctx: JobContext) -> ExtractionOutcome:
-    """Development stand-in until the AI orchestrator (Phase 4) is wired in."""
+    """Development stand-in for a real provider: returns a valid sample invoice whose number and
+    supplier are unique per invoice (so unrelated uploads aren't flagged as duplicates)."""
+    from app.services.ai.providers import FAKE_INVOICE
+    from app.services.ai.schema import parse_model_output
+
     lowered = ctx.filename.lower()
     if "fail" in lowered:
         raise PermanentJobError("extraction_failed", "fake handler: forced permanent failure")
     if "flaky" in lowered and ctx.attempt == 1:
         raise RetryableJobError("provider_unavailable", "fake handler: forced transient failure")
-    return ExtractionOutcome(data={}, metadata={"handler": "fake", "bytes": len(ctx.data)})
+    tag = ctx.invoice_id.hex[:10].upper()
+    sample = {
+        **FAKE_INVOICE,
+        "invoice_number": f"INV-{tag}",
+        "supplier": {"name": f"Sample Supplier {tag}", "address": "12 MG Road, Pune"},
+    }
+    data = parse_model_output(sample).model_dump(mode="json")
+    return ExtractionOutcome(data=data, metadata={"handler": "fake", "bytes": len(ctx.data)})
 
 
 register_handler("fake", _fake_handler)
@@ -287,6 +298,13 @@ def complete(db: Session, job: ExtractionJob, outcome: ExtractionOutcome) -> Non
             setattr(job, key, outcome.metadata[key])
     invoice.processed_at = utcnow()
     invoice.error_code = invoice.error_message = None
+    # A fresh extraction replaces earlier customer corrections, then quality checks run.
+    invoice.reviewed_data = None
+    invoice.edited_fields = []
+    db.flush()
+    from app.services import quality
+
+    quality.evaluate(db, invoice, "extraction")
     job.status = JobStatus.SUCCEEDED
     job.finished_at = utcnow()
     job.lease_expires_at = None

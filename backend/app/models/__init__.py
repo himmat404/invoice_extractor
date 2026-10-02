@@ -49,9 +49,27 @@ from app.models.invoices import (
     JobKind,
     JobStatus,
 )
+from app.models.quality import (
+    ConfidenceThresholdVersion,
+    DuplicateDecision,
+    DuplicateDetectionRule,
+    DuplicateMatchResult,
+    DuplicateRuleType,
+    DuplicateStatus,
+    ValidationResult,
+    ValidationStatus,
+)
 from app.models.settings import SystemSetting
 
 __all__ = [
+    "ConfidenceThresholdVersion",
+    "DuplicateDecision",
+    "DuplicateDetectionRule",
+    "DuplicateMatchResult",
+    "DuplicateRuleType",
+    "DuplicateStatus",
+    "ValidationResult",
+    "ValidationStatus",
     "AI_ERROR_CLASSES",
     "DEFAULT_FALLBACK_ON",
     "AICall",

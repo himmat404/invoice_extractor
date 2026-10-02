@@ -22,7 +22,7 @@ from app.models import (
     User,
     Workspace,
 )
-from app.services import files, jobs
+from app.services import duplicates, files, jobs
 from app.services.audit import record_activity
 from app.services.credits import InsufficientCreditsError
 from app.services.storage import get_storage
@@ -192,9 +192,10 @@ def create_batch(
     for c in candidates:
         _validate(c, max_bytes)
 
+    exact_rule = duplicates.exact_file_rule_active(db, workspace.id)
     seen: dict[str, int] = {}
     for idx, c in enumerate(candidates):
-        if c.rejection or c.sha256 is None or allow_duplicates:
+        if c.rejection or c.sha256 is None or allow_duplicates or not exact_rule:
             continue
         c.duplicate_of = _find_duplicate(db, workspace.id, c.sha256)
         if c.duplicate_of is None and c.sha256 in seen:

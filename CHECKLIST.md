@@ -102,16 +102,20 @@ Section references (e.g. `§4.3`) point to that document.
 - [ ] Gemini File API for documents over ~18 MB (inline limit) — later
 
 ## Phase 5 — Validation, confidence, duplicates
-- [ ] Validation engine: required fields, dates, numerics, currency codes (§4.6)
-- [ ] GSTIN/tax ID format + checksum
-- [ ] Line total, subtotal, tax, discount, grand-total reconciliation
-- [ ] Validation states: Passed / Warning / Needs Review / Failed
-- [ ] `validation_results` persisted per invoice
-- [ ] Field-level confidence storage; "Unavailable" when not supplied (§21.2)
-- [ ] Admin-configurable confidence thresholds (versioned)
-- [ ] `duplicate_detection_rules`, `duplicate_match_results` (§21.1)
-- [ ] File hash, exact, multi-field and similarity rules; workspace-scoped only
-- [ ] Customer decision: keep both / mark duplicate / cancel — recorded in activity
+- [x] Deterministic validation engine, independent of the AI: required fields, dates, currency (ISO 4217), numerics (§4.6)
+- [x] GSTIN format, state code and check digit; CGST/SGST vs IGST consistency with supplier/customer states
+- [x] Line totals and line tax, subtotal, tax total, tax-line consistency, grand-total reconciliation (discounts, charges, tax-inclusive lines, rounding lines), balance due
+- [x] Configurable tolerances and required fields via system settings (`validation.*`)
+- [x] Validation states Passed / Warning / Needs Review / Failed with customer-readable issues; `validation_results` history
+- [x] Field confidence bands (High/Medium/Low/Unavailable), never invented; overall indicator only when defined (`min_review_fields_v1`) (§21.2)
+- [x] Versioned, admin-configurable confidence thresholds and review fields
+- [x] `duplicate_detection_rules` (exact file, supplier + invoice number, multi-field, similarity; confirmed/potential; blocking) and `duplicate_match_results` (§21.1)
+- [x] Workspace-scoped matching only; outcomes No Match / Potential / Confirmed / Review Required
+- [x] Customer decisions: keep both / mark duplicate / cancel (cancel refunds the credit, configurable) — recorded in activity
+- [x] Workspace-level extra rules gated by the `duplicate_rule_overrides` entitlement
+- [x] Review API: corrections stored separately from the original extraction, edited-field tracking, revalidation, approve (with acknowledgement of open issues), editing an approved invoice reopens it (§4.5)
+- [x] Review queue; invoice search/filter/sort by number, supplier, customer, date, amount, currency, statuses (§4.7)
+- [x] Invoice status derived from validation + confidence + pending duplicate decisions (§10)
 
 ## Phase 6 — Customer app (frontend)
 - [ ] App shell, routing, auth pages (register, login, verify, forgot/reset)
@@ -200,6 +204,7 @@ Section references (e.g. `§4.3`) point to that document.
 
 | Date | Phase | Notes |
 |---|---|---|
+| 2026-10-02 | 5 | Validation engine (GST, reconciliation), versioned confidence bands, configurable workspace-scoped duplicate rules with customer decisions, review/edit/approve API, review queue, search filters. 171 tests passing. |
 | 2026-10-02 | 4 | AI orchestration: encrypted provider credentials, Gemini + fake adapters, primary/fallback routing with error classes, prompt versions, canonical schema + strict parser, per-call cost/usage tracking, admin AI API. 136 tests passing. |
 | 2026-10-02 | 3 | Storage with signed URLs, upload validation (magic bytes, PDF/image checks, HEIC, safe ZIP), duplicate check, credit pre-check, Postgres job queue + worker with leases/retries/fairness, batch/invoice endpoints, admin job monitor. 95 tests passing. |
 | 2026-10-02 | 2 | Plans & entitlements, subscriptions with period rollover and grace, credit ledger with row locking and idempotency, usage records, admin plan/credit management. 60 tests passing. |

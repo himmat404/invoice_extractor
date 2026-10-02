@@ -9,10 +9,11 @@ from app.api.admin import auth as admin_auth
 from app.api.admin import customers as admin_customers
 from app.api.admin import jobs as admin_jobs
 from app.api.admin import plans as admin_plans
+from app.api.admin import quality as admin_quality
 from app.api.admin import staff as admin_staff
 from app.api.admin import system as admin_system
 from app.api.admin import workspaces as admin_workspaces
-from app.api.customer import account, auth, billing, invoices
+from app.api.customer import account, auth, billing, invoices, rules
 from app.core.config import get_settings
 from app.core.db import engine
 from app.core.errors import register_error_handlers
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     customer.include_router(billing.router)
     customer.include_router(invoices.router)
     customer.include_router(invoices.files_router)
+    customer.include_router(rules.router)
     app.include_router(customer)
 
     admin = APIRouter(prefix="/api/admin")
@@ -57,6 +59,7 @@ def create_app() -> FastAPI:
     admin.include_router(admin_workspaces.router)
     admin.include_router(admin_jobs.router)
     admin.include_router(admin_ai.router)
+    admin.include_router(admin_quality.router)
     app.include_router(admin)
 
     @app.get("/health", tags=["system"])

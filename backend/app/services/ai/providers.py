@@ -177,7 +177,7 @@ FAKE_INVOICE = {
     "customer": {
         "name": "Globex Retail",
         "address": "5 Park Street, Mumbai",
-        "tax_id": "27AAACG1234A1Z5",
+        "tax_id": "27AAACG1234A1ZE",
     },
     "line_items": [
         {

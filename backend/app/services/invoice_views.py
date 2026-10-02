@@ -39,8 +39,22 @@ def can_reprocess(inv: Invoice) -> bool:
     )
 
 
+_HEADER = (
+    "invoice_number",
+    "invoice_date",
+    "supplier_name",
+    "customer_name",
+    "currency",
+    "grand_total",
+    "validation_status",
+    "duplicate_status",
+    "approved_at",
+)
+
+
 def invoice_out(inv: Invoice) -> InvoiceOut:
     return InvoiceOut(
+        **{f: getattr(inv, f) for f in _HEADER},
         id=inv.id,
         status=inv.status,
         status_label=INVOICE_STATUS_LABELS[inv.status],
@@ -140,4 +154,90 @@ def batch_out(db: Session, batch: Batch) -> BatchOut:
             )
             for i in items
         ],
+    )
+
+
+_EDITABLE = {
+    InvoiceStatus.EXTRACTED,
+    InvoiceStatus.VALIDATION_WARNING,
+    InvoiceStatus.NEEDS_REVIEW,
+    InvoiceStatus.APPROVED,
+}
+
+
+def can_edit(inv: Invoice) -> bool:
+    return inv.deleted_at is None and inv.extraction_result is not None and inv.status in _EDITABLE
+
+
+def invoice_detail(db: Session, inv: Invoice):
+    from app.models import DuplicateDecision, DuplicateMatchResult
+    from app.schemas.invoices import (
+        DuplicateMatchOut,
+        InvoiceDetailOut,
+        MatchedInvoiceOut,
+        ValidationOut,
+    )
+    from app.services import quality
+
+    validation = quality.latest_validation(db, inv)
+    data = quality.current_data(inv)
+    matches = db.scalars(
+        select(DuplicateMatchResult)
+        .where(DuplicateMatchResult.invoice_id == inv.id)
+        .order_by(DuplicateMatchResult.created_at)
+    ).all()
+    dupes = []
+    for m in matches:
+        other = db.get(Invoice, m.matched_invoice_id)
+        if other is None or other.workspace_id != inv.workspace_id:
+            continue
+        dupes.append(
+            DuplicateMatchOut(
+                id=m.id,
+                rule_name=m.rule_name,
+                outcome=m.outcome.value,
+                score=m.score,
+                matched_fields=m.matched_fields,
+                decision=m.decision.value,
+                matched_invoice=MatchedInvoiceOut(
+                    id=other.id,
+                    invoice_number=other.invoice_number,
+                    supplier_name=other.supplier_name,
+                    invoice_date=other.invoice_date,
+                    grand_total=other.grand_total,
+                    currency=other.currency,
+                    status=other.status.value,
+                    filename=other.file.filename,
+                ),
+            )
+        )
+    marked = any(m.decision == DuplicateDecision.MARKED_DUPLICATE for m in matches)
+    base = invoice_out(inv)
+    return InvoiceDetailOut(
+        **base.model_dump(),
+        data=data.model_dump(mode="json") if data else None,
+        edited_fields=list(inv.edited_fields or []),
+        reviewed_at=inv.reviewed_at,
+        validation=ValidationOut(
+            status=validation.status.value,
+            rules_version=validation.rules_version,
+            issues=validation.issues,
+            computed=validation.computed,
+        )
+        if validation
+        else None,
+        confidence=inv.confidence_summary,
+        duplicates=dupes,
+        can_edit=can_edit(inv) and inv.status != InvoiceStatus.EXPORTED,
+        can_approve=(
+            inv.status
+            in (
+                InvoiceStatus.EXTRACTED,
+                InvoiceStatus.VALIDATION_WARNING,
+                InvoiceStatus.NEEDS_REVIEW,
+            )
+            and not marked
+            and inv.validation_status != "failed"
+            and inv.deleted_at is None
+        ),
     )

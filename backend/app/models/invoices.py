@@ -1,15 +1,18 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     func,
     text,
@@ -166,6 +169,9 @@ class Invoice(UUIDPrimaryKey, Timestamps, Base):
     __table_args__ = (
         Index("ix_invoices_ws_created", "workspace_id", "created_at"),
         Index("ix_invoices_ws_status", "workspace_id", "status"),
+        Index("ix_invoices_ws_norm_number", "workspace_id", "norm_invoice_number"),
+        Index("ix_invoices_ws_supplier_tax", "workspace_id", "supplier_tax_id"),
+        Index("ix_invoices_ws_date", "workspace_id", "invoice_date"),
     )
 
     workspace_id: Mapped[uuid.UUID] = mapped_column(
@@ -191,6 +197,34 @@ class Invoice(UUIDPrimaryKey, Timestamps, Base):
     error_message: Mapped[str | None] = mapped_column(String(300))
     extraction_result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     extraction_job_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # Customer corrections, kept separately so the original extraction stays traceable.
+    reviewed_data: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    edited_fields: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default="[]")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    # Quality signals (spec 4.6, 21.1, 21.2)
+    validation_status: Mapped[str | None] = mapped_column(String(16))
+    validation_result_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    confidence_summary: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    duplicate_status: Mapped[str] = mapped_column(
+        String(24), default="no_match", server_default="no_match"
+    )
+    duplicate_of_invoice_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # Searchable header copied from the current data (spec 4.7)
+    invoice_number: Mapped[str | None] = mapped_column(String(100))
+    norm_invoice_number: Mapped[str | None] = mapped_column(String(100))
+    invoice_date: Mapped[date | None] = mapped_column(Date)
+    due_date: Mapped[date | None] = mapped_column(Date)
+    supplier_name: Mapped[str | None] = mapped_column(String(300))
+    norm_supplier_name: Mapped[str | None] = mapped_column(String(300))
+    supplier_tax_id: Mapped[str | None] = mapped_column(String(64))
+    customer_name: Mapped[str | None] = mapped_column(String(300))
+    currency: Mapped[str | None] = mapped_column(String(3))
+    grand_total: Mapped[Decimal | None] = mapped_column(Numeric(16, 2))
+    total_tax: Mapped[Decimal | None] = mapped_column(Numeric(16, 2))
     credit_consumed: Mapped[bool] = mapped_column(Boolean, default=False)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
